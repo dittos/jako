@@ -15,6 +15,7 @@ annotated-types==0.7.0
 anyio==4.6.2.post1
     # via httpx
     # via openai
+    # via starlette
 beautifulsoup4==4.12.3
     # via jako
 cachetools==5.5.0
@@ -25,8 +26,18 @@ certifi==2024.8.30
     # via requests
 charset-normalizer==3.4.0
     # via requests
+click==8.1.7
+    # via uvicorn
+contourpy==1.3.0
+    # via matplotlib
+cycler==0.12.1
+    # via matplotlib
 distro==1.9.0
     # via openai
+fastapi==0.115.4
+    # via jako
+fonttools==4.54.1
+    # via matplotlib
 google-ai-generativelanguage==0.6.10
     # via google-generativeai
 google-api-core==2.22.0
@@ -55,6 +66,7 @@ grpcio-status==1.67.1
     # via google-api-core
 h11==0.14.0
     # via httpcore
+    # via uvicorn
 httpcore==1.0.6
     # via httpx
 httplib2==0.22.0
@@ -66,10 +78,28 @@ idna==3.10
     # via anyio
     # via httpx
     # via requests
+jinja2==3.1.4
+    # via jako
 jiter==0.7.0
     # via openai
+kiwisolver==1.4.7
+    # via matplotlib
+markupsafe==3.0.2
+    # via jinja2
+matplotlib==3.9.2
+    # via jako
+numpy==2.1.3
+    # via contourpy
+    # via matplotlib
+    # via pandas
 openai==1.53.0
     # via jako
+packaging==24.1
+    # via matplotlib
+pandas==2.2.3
+    # via jako
+pillow==11.0.0
+    # via matplotlib
 proto-plus==1.25.0
     # via google-ai-generativelanguage
     # via google-api-core
@@ -86,6 +116,7 @@ pyasn1==0.6.1
 pyasn1-modules==0.4.1
     # via google-auth
 pydantic==2.9.2
+    # via fastapi
     # via google-generativeai
     # via jako
     # via openai
@@ -93,6 +124,12 @@ pydantic-core==2.23.4
     # via pydantic
 pyparsing==3.2.0
     # via httplib2
+    # via matplotlib
+python-dateutil==2.9.0.post0
+    # via matplotlib
+    # via pandas
+pytz==2024.2
+    # via pandas
 regex==2024.9.11
     # via tiktoken
 requests==2.32.3
@@ -101,23 +138,32 @@ requests==2.32.3
     # via tiktoken
 rsa==4.9
     # via google-auth
+six==1.16.0
+    # via python-dateutil
 sniffio==1.3.1
     # via anyio
     # via httpx
     # via openai
 soupsieve==2.6
     # via beautifulsoup4
+starlette==0.41.2
+    # via fastapi
 tiktoken==0.8.0
     # via jako
 tqdm==4.66.6
     # via google-generativeai
     # via openai
 typing-extensions==4.12.2
+    # via fastapi
     # via google-generativeai
     # via openai
     # via pydantic
     # via pydantic-core
+tzdata==2024.2
+    # via pandas
 uritemplate==4.1.1
     # via google-api-python-client
 urllib3==2.2.3
     # via requests
+uvicorn==0.32.0
+    # via jako
