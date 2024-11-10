@@ -73,6 +73,7 @@ def preprocess_html(html: str, title: str, keep_cite_ref_a: bool = False):
         node_id = next_node_id
         next_node_id += 1
         attrs[node_id] = node.attrs.copy()
+        attrs[node_id]["_tag"] = node.name
         node.attrs.clear()
         node.attrs["id"] = f"{node_id:x}"  # using hex seems to be more robust
     
@@ -97,8 +98,12 @@ def restore_html(html: str, restore_info: RestoreInfo):
         if not node_id:
             continue
 
-        node_id = int(node_id, 16)
-        node.attrs = restore_info.attrs.get(node_id)
+        int_node_id = int(node_id, 16)
+        attrs = restore_info.attrs.get(int_node_id)
+        tag = attrs.pop("_tag", None)
+        if tag and node.name != tag:
+            raise ValueError(f"tag mismatch; id={node_id}; expected {tag} but {node.name}")
+        node.attrs = attrs
     
     # restore citations
     cite_refs = restore_info.cite_refs
@@ -143,3 +148,36 @@ def split_html_chunks(html: str, chunk_size: int) -> Iterable[str]:
         assert len(chunk) > 0
         offset += len(chunk)
         yield chunk
+
+
+def validate_html(html: str, restore_info: RestoreInfo) -> bool:
+    doc = parse_html(html)
+    
+    for node in doc.descendants:
+        if not isinstance(node, bs4.Tag):
+            continue
+
+        node_id = node.attrs.get("id")
+        if not node_id:
+            continue
+
+        int_node_id = int(node_id, 16)
+        attrs = restore_info.attrs.get(int_node_id)
+        tag = attrs.get("_tag", None)
+        if tag and node.name != tag:
+            print(f"tag mismatch; id={node_id}; expected {tag} but {node.name}")
+            return False
+    
+    return True
+
+
+def strip_broken_tag(html: str):
+    open_idx = html.rfind('<')
+    if open_idx == -1:
+        return html
+    
+    close_idx = html.rfind('>')
+    if close_idx == -1 or close_idx < open_idx:
+        return html[:open_idx]
+
+    return html
