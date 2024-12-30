@@ -12,7 +12,10 @@
 -e file:.
 annotated-types==0.7.0
     # via pydantic
+anthropic==0.39.0
+    # via jako
 anyio==4.6.2.post1
+    # via anthropic
     # via httpx
     # via openai
     # via starlette
@@ -33,6 +36,7 @@ contourpy==1.3.0
 cycler==0.12.1
     # via matplotlib
 distro==1.9.0
+    # via anthropic
     # via openai
 fastapi==0.115.4
     # via jako
@@ -40,9 +44,11 @@ fonttools==4.54.1
     # via matplotlib
 google-ai-generativelanguage==0.6.10
     # via google-generativeai
-google-api-core==2.22.0
+google-api-core==1.34.1
     # via google-ai-generativelanguage
     # via google-api-python-client
+    # via google-cloud-core
+    # via google-cloud-translate
     # via google-generativeai
 google-api-python-client==2.151.0
     # via google-generativeai
@@ -51,18 +57,31 @@ google-auth==2.35.0
     # via google-api-core
     # via google-api-python-client
     # via google-auth-httplib2
+    # via google-cloud-translate
+    # via google-genai
     # via google-generativeai
 google-auth-httplib2==0.2.0
     # via google-api-python-client
+google-cloud-core==1.5.0
+    # via google-cloud-translate
+google-cloud-translate==3.18.0
+    # via jako
+google-genai==0.3.0
+    # via jako
 google-generativeai==0.8.3
     # via jako
 googleapis-common-protos==1.65.0
     # via google-api-core
+    # via grpc-google-iam-v1
     # via grpcio-status
+grpc-google-iam-v1==0.13.1
+    # via google-cloud-translate
 grpcio==1.67.1
     # via google-api-core
+    # via googleapis-common-protos
+    # via grpc-google-iam-v1
     # via grpcio-status
-grpcio-status==1.67.1
+grpcio-status==1.48.2
     # via google-api-core
 h11==0.14.0
     # via httpcore
@@ -73,6 +92,7 @@ httplib2==0.22.0
     # via google-api-python-client
     # via google-auth-httplib2
 httpx==0.27.2
+    # via anthropic
     # via openai
 idna==3.10
     # via anyio
@@ -81,6 +101,7 @@ idna==3.10
 jinja2==3.1.4
     # via jako
 jiter==0.7.0
+    # via anthropic
     # via openai
 kiwisolver==1.4.7
     # via matplotlib
@@ -99,15 +120,18 @@ packaging==24.1
 pandas==2.2.3
     # via jako
 pillow==11.0.0
+    # via google-genai
     # via matplotlib
 proto-plus==1.25.0
     # via google-ai-generativelanguage
-    # via google-api-core
-protobuf==5.28.3
+    # via google-cloud-translate
+protobuf==3.20.3
     # via google-ai-generativelanguage
     # via google-api-core
+    # via google-cloud-translate
     # via google-generativeai
     # via googleapis-common-protos
+    # via grpc-google-iam-v1
     # via grpcio-status
     # via proto-plus
 pyasn1==0.6.1
@@ -116,7 +140,9 @@ pyasn1==0.6.1
 pyasn1-modules==0.4.1
     # via google-auth
 pydantic==2.9.2
+    # via anthropic
     # via fastapi
+    # via google-genai
     # via google-generativeai
     # via jako
     # via openai
@@ -134,13 +160,16 @@ regex==2024.9.11
     # via tiktoken
 requests==2.32.3
     # via google-api-core
+    # via google-genai
     # via jako
     # via tiktoken
 rsa==4.9
     # via google-auth
 six==1.16.0
+    # via google-cloud-core
     # via python-dateutil
 sniffio==1.3.1
+    # via anthropic
     # via anyio
     # via httpx
     # via openai
@@ -150,10 +179,12 @@ starlette==0.41.2
     # via fastapi
 tiktoken==0.8.0
     # via jako
-tqdm==4.66.6
+tqdm==4.67.0
     # via google-generativeai
+    # via jako
     # via openai
 typing-extensions==4.12.2
+    # via anthropic
     # via fastapi
     # via google-generativeai
     # via openai
@@ -167,3 +198,5 @@ urllib3==2.2.3
     # via requests
 uvicorn==0.32.0
     # via jako
+websockets==14.1
+    # via google-genai

@@ -47,3 +47,4 @@ class PageData(BaseModel):
     page: Page
     links_langlinks: list[PageLanglinks]
     last_rev_timestamp: datetime
+    metadata: dict = {}
