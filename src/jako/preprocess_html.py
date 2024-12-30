@@ -1,3 +1,4 @@
+import re
 from typing import Iterable
 import bs4
 
@@ -16,16 +17,19 @@ def parse_html(html: str) -> bs4.BeautifulSoup:
     return bs4.BeautifulSoup(html, "html.parser")
 
 
-def to_html(doc: bs4.BeautifulSoup | bs4.Tag) -> str:
+def to_html(doc: bs4.BeautifulSoup | bs4.Tag | bs4.NavigableString) -> str:
+    if isinstance(doc, bs4.NavigableString):
+        return str(doc)
     return doc.decode(formatter=HTML_FORMATTER)
 
 
 def preprocess_html(html: str, title: str, keep_cite_ref_a: bool = False):
     doc = parse_html(html)
 
-    title_tag = doc.new_tag('title')
-    title_tag.string = title
-    doc.insert(0, title_tag)
+    if title:
+        title_tag = doc.new_tag('title')
+        title_tag.string = title
+        doc.insert(0, title_tag)
 
     # extract metadata tags
     metadata_tags = []
@@ -87,8 +91,12 @@ def preprocess_html(html: str, title: str, keep_cite_ref_a: bool = False):
 def restore_html(html: str, restore_info: RestoreInfo):
     doc = parse_html(html)
 
-    title_tag = doc.title.extract()
-    title = title_tag.string
+    title_tag = doc.title
+    if title_tag:
+        title_tag.extract()
+        title = title_tag.string
+    else:
+        title = ""
 
     for node in doc.descendants:
         if not isinstance(node, bs4.Tag):
@@ -181,3 +189,146 @@ def strip_broken_tag(html: str):
         return html[:open_idx]
 
     return html
+
+
+def split_mediawiki_html_sections(html: str) -> list[str]:
+    doc = parse_html(html)
+
+    # MediaWiki HTML has the following format:
+    #
+    # <div class="mw-content-ltr mw-parser-output" lang="ja" dir="ltr">
+    #   <section class="mf-section-0" id="mf-section-0">...</section>
+    #
+    #   <div class="mw-heading mw-heading2 section-heading" onclick="mfTempOpenSection(1)">...</div>
+    #   <section class="mf-section-1 collapsible-block" id="mf-section-1">...</section>
+    #
+    #   <div class="mw-heading mw-heading2 section-heading" onclick="mfTempOpenSection(2)">...</div>
+    #   <section class="mf-section-2 collapsible-block" id="mf-section-2">...</section>
+    #
+    #   ...
+    # </div>
+
+    roots = list(iterate_effective_children(doc))
+    assert len(roots) == 1
+    root = roots[0]
+    assert root.name == "div" and "mw-parser-output" in root.attrs["class"]
+
+    iterator = iterate_effective_children(root)
+
+    def read_section():
+        section = next(iterator, None)
+        if section is None: return None
+        assert section.name == "section"
+        return section
+
+    def read_heading():
+        heading = next(iterator, None)
+        if heading is None: return None
+        assert heading.name == "div" and "section-heading" in heading.attrs["class"]
+        return heading
+    
+    sections = []
+    sections.append(to_html(read_section()))
+
+    while True:
+        heading = read_heading()
+        if heading is None: break
+        section = read_section()
+        assert section
+        sections.append(to_html(heading) + to_html(section))
+    
+    return sections
+
+
+def iterate_effective_children(doc: bs4.BeautifulSoup):
+    return filter_effective_children(doc.children)
+
+
+def filter_effective_children(children: Iterable[bs4.PageElement]):
+    for child in children:
+        if isinstance(child, bs4.NavigableString):
+            if not any(string.strip() for string in child.strings):
+                continue
+        if isinstance(child, bs4.Comment):
+            continue
+        
+        yield child
+
+
+def preprocess_split_html(html: str, title: str, size: int, keep_cite_ref_a: bool = False) -> tuple[list[str], RestoreInfo]:
+    html, restore_info = preprocess_html(html, title=title, keep_cite_ref_a=keep_cite_ref_a)
+    doc = parse_html(html)
+    can_split_div_classes = {"section-heading", "toc", "reflist", "thumb", "thumbinner", "mw-parser-output"}
+
+    def _can_split(node: bs4.Tag):
+        if node.name in ("section", "dl", "ul", "ol", "table", "tbody"):
+            return True
+        if node.name == "li":
+            if node.select_one("ul, ol"):
+                return True
+        if node.name == "div":
+            node_id = node.attrs.get("id")
+            if not node_id:
+                return False
+            
+            int_node_id = int(node_id, 16)
+            attrs = restore_info.attrs.get(int_node_id)
+
+            if "class" in attrs:
+                if any(cls in can_split_div_classes for cls in attrs["class"]):
+                    return True
+        return False
+
+    def _split_html(children: list[bs4.PageElement]):
+        for child in filter_effective_children(children):
+            if isinstance(child, bs4.Tag) and _can_split(child):
+                children = list(child.children)
+                child = child.unwrap()
+                start, end = to_html(child).split("</")
+                yield start
+                yield from _split_html(children)
+                if end:
+                    yield f"</{end}"
+            else:
+                yield to_html(child)
+
+    chunks = []
+    buf = ""
+    for part in _split_html(list(doc.children)):
+        part_len = len(part)
+        if buf and len(buf) + part_len > size:
+            chunks.append(buf)
+            buf = ""
+        buf += part
+    if buf:
+        chunks.append(buf)
+    
+    return chunks, restore_info
+
+
+START_TAGS_PATTERN = re.compile(r'^(\s*<[a-z]+>)+')
+END_TAGS_PATTERN = re.compile(r'(</[a-z]+>\s*)+$')
+
+
+def recover_start_end_tags(original: str, response: str) -> str:
+    response = response.replace("```html", "").replace("```", "")
+    
+    original_end_tags = END_TAGS_PATTERN.search(original)
+    if original_end_tags:
+        original_end_tags = original_end_tags.group()
+    else:
+        original_end_tags = ""
+    
+    original_start_tags = START_TAGS_PATTERN.search(original)
+    if original_start_tags:
+        original_start_tags = original_start_tags.group()
+    else:
+        original_start_tags = ""
+    
+    response_start_tags = START_TAGS_PATTERN.search(response)
+    start_pos = response_start_tags.end() if response_start_tags else 0
+
+    response_end_tags = END_TAGS_PATTERN.search(response)
+    end_pos = response_end_tags.start() if response_end_tags else len(response)
+
+    return original_start_tags + response[start_pos:end_pos] + original_end_tags
