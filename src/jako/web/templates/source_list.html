@@ -1,0 +1,7 @@
+<ul>
+{% for page in pages %}
+    <li>
+        <a href="/source/{{ page.page | urlencode }}">{{ page.page }}</a>
+    </li>
+{% endfor %}
+</ul>
