@@ -7,7 +7,7 @@ from pathlib import Path
 from jako.cache import Cache
 from jako.llm import GoogleGenaiClient
 from jako.models.page import PageData
-from jako.preprocess_html import preprocess_split_html, recover_start_end_tags, restore_html
+from jako.preprocess_html import TagMismatchError, preprocess_split_html, recover_start_end_tags, restore_html
 from jako.prompts.glossary import glossary
 
 
@@ -68,8 +68,13 @@ async def process(input_path: Path, overwrite: bool = False):
         if r.candidates[0].finish_reason != "STOP":
             raise Exception(f"Unexpected finish reason: {r.candidates[0].finish_reason} for chunk {i}")
 
-    result_html = ''.join(recover_start_end_tags(original, r.text) for original, r in zip(chunks, responses))
-    result_html, result_title = restore_html(result_html, restore_info)
+    result_htmls = list(recover_start_end_tags(original, r.text) for original, r in zip(chunks, responses))
+    result_html = ''.join(result_htmls)
+    try:
+        result_html, result_title = restore_html(result_html, restore_info)
+    except TagMismatchError as e:
+        _print_tag_mismatch_error(e, chunks, result_htmls)
+        raise e
 
     result_path.write_text(json.dumps({
         "title": result_title,
@@ -77,6 +82,21 @@ async def process(input_path: Path, overwrite: bool = False):
     }))
 
     # cache.flush()
+
+
+def _print_tag_mismatch_error(e: TagMismatchError, chunks, result_htmls):
+    sourceline, sourcepos = e.node.sourceline, e.node.sourcepos
+    pos = sum(len(chunk) for chunk in chunks[:sourceline - 1]) + sourcepos
+    lastpos = 0
+    for i, result_chunk in enumerate(result_htmls):
+        if lastpos + len(result_chunk) >= pos:
+            pos_in_chunk = pos - lastpos
+            original_pos_in_chunk = chunks[i].find(f"<{e.expected_tag} id=\"{e.node_id}\"")
+            print(str(e))
+            print(f"Original:   {repr(chunks[i][max(original_pos_in_chunk-20, 0):min(original_pos_in_chunk+100, len(chunks[i]))])}")
+            print(f"Translated: {repr(result_chunk[max(pos_in_chunk-20, 0):min(pos_in_chunk+100, len(result_chunk))])}")
+            break
+        lastpos += len(result_chunk)
 
 
 async def main(args):
@@ -89,7 +109,7 @@ async def main(args):
                 line = line.strip()
                 if not line:
                     continue
-                input_paths.append(Path("data/source") / f"{line}.json")
+                input_paths.append(Path("data/source") / f"{line.replace('/', '__')}.json")
     else:
         input_paths = [input_path]
     

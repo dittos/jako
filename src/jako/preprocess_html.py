@@ -71,7 +71,14 @@ def preprocess_html(html: str, title: str, keep_cite_ref_a: bool = False):
     attrs = {}
     next_node_id = 0
     for node in doc.descendants:
-        if not isinstance(node, bs4.Tag) or not node.attrs:
+        if not isinstance(node, bs4.Tag):
+            continue
+        if (
+            not node.attrs
+            # Gemini 1.5 Flash seems to introduce one-off error often 
+            # if id attribute if <b>/<i> and <a id> are mixed, so force id attribute.
+            and node.name not in ("b", "i")
+        ):
             continue
 
         node_id = next_node_id
@@ -86,6 +93,14 @@ def preprocess_html(html: str, title: str, keep_cite_ref_a: bool = False):
         attrs=attrs,
         cite_refs=cite_refs,
     )
+
+
+class TagMismatchError(ValueError):
+    def __init__(self, node: bs4.Tag, expected_tag: str):
+        self.node = node
+        self.node_id = node.attrs["id"]
+        self.expected_tag = expected_tag
+        super().__init__(f"tag mismatch; id={self.node_id}; expected {expected_tag} but {node.name}")
 
 
 def restore_html(html: str, restore_info: RestoreInfo):
@@ -108,9 +123,13 @@ def restore_html(html: str, restore_info: RestoreInfo):
 
         int_node_id = int(node_id, 16)
         attrs = restore_info.attrs.get(int_node_id)
-        tag = attrs.pop("_tag", None)
-        if tag and node.name != tag:
-            raise ValueError(f"tag mismatch; id={node_id}; expected {tag} but {node.name}")
+        expected_tag = attrs.pop("_tag", None)
+        if expected_tag and node.name != expected_tag:
+            if node.name == "td":
+                first_child = next(node.children, None)
+                if first_child is not None and first_child.name == expected_tag and first_child.attrs.get("id") == node_id:
+                    continue
+            raise TagMismatchError(node, expected_tag=expected_tag)
         node.attrs = attrs
     
     # restore citations
@@ -134,8 +153,8 @@ def restore_html(html: str, restore_info: RestoreInfo):
             cite.append(a)
 
     # restore metadata tags
-    for tag in restore_info.metadata_tags:
-        doc.append(parse_html(tag))
+    for expected_tag in restore_info.metadata_tags:
+        doc.append(parse_html(expected_tag))
     
     return to_html(doc), title
 
