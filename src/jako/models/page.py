@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Langlink(BaseModel):
@@ -17,12 +17,19 @@ class Link(BaseModel):
     model_config = ConfigDict(extra='allow')
 
 
+class Redirect(BaseModel):
+    from_: str = Field(alias='from')
+    to: str
+    tofragment: str | None = None
+
+
 class Page(BaseModel):
     title: str
     text: str
     revid: int
     langlinks: list[Langlink]
     links: list[Link]
+    redirects: list[Redirect] = []
 
     model_config = ConfigDict(extra='allow')
 
