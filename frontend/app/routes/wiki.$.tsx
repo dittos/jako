@@ -1,4 +1,5 @@
 import {
+  MetaFunction,
   redirect,
   useLoaderData,
 } from "@remix-run/react";
@@ -33,6 +34,12 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
     return redirect(redirectUrl);
   }
   return data;
+};
+
+export const meta: MetaFunction<typeof loader> = ({
+  data,
+}) => {
+  return [{ title: `${data.title} - jako` }];
 };
 
 export default function WikiPage() {
