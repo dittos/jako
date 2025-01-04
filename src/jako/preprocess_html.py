@@ -1,10 +1,21 @@
 import re
-from typing import Iterable
+from typing import Any, Iterable
 import bs4
+from pydantic import BaseModel
 
-from jako.models.prompt import CiteRefRestoreInfo, RestoreInfo
 
-__all__ = ["preprocess_html", "restore_html"]
+class CiteRefRestoreInfo(BaseModel):
+    a_attrs: dict[str, str | Any] | None
+    pre: str
+    post: str
+
+
+class RestoreInfo(BaseModel):
+    metadata_tags: list[str]
+    attrs: dict[int, dict[str, str | Any]]
+    cite_refs: dict[str, CiteRefRestoreInfo]
+    references: dict[str, str] = {}
+
 
 HTML_FORMATTER = bs4.formatter.HTMLFormatter(
     entity_substitution=bs4.formatter.EntitySubstitution.substitute_xml,
