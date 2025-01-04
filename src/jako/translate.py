@@ -16,12 +16,13 @@ async def process(input_path: Path, overwrite: bool = False):
     if result_path.exists() and not overwrite:
         print(f"Result file {result_path} already exists. Use --overwrite to overwrite.")
         return
-
-    cache_path = Path("data/cache") / input_path.name
-    cache_path.parent.mkdir(parents=True, exist_ok=True)
-    cache = Cache(cache_path)
     
     data = PageData.model_validate_json(input_path.read_text())
+
+    cache_path = Path("data/cache") / f"{data.page.pageid}.json"
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    print("Using cache:", cache_path)
+    cache = Cache(cache_path)
 
     chunks, restore_info = preprocess_split_html(
         data.page.text,
@@ -40,41 +41,63 @@ async def process(input_path: Path, overwrite: bool = False):
         "Don't ask to continue translation.Don't explain about translation."\
         "Don't stop translation early."
     
-    responses: list[GoogleGenaiClient.GenerateContentResponse] = []
-    for i, batch in enumerate(batched(chunks, 10)):
-        print(f"batch {i}...")
-        tasks = [
-            client.agenerate_content(
-                model="gemini-1.5-flash",
-                # model="gemini-2.0-flash-exp",
-                contents=chunk + "\n\n위 내용을 한국어로 번역하고 자연스러운 한국어로 수정하라.\n\n" + glossary(chunk, data),
-                config=dict(
-                    system_instruction=system_prompt,
-                    max_output_tokens=4096,
-                    temperature=0.2,
-                ),
-                cache=cache,
-            )
-            for chunk in batch
-        ]
-        batch_responses = await asyncio.gather(*tasks, return_exceptions=True)
-        for r in batch_responses:
-            if isinstance(r, Exception):
-                raise r
-            else:
-                responses.append(r)
+    chunk_args = []
+    for chunk in chunks:
+        chunk_args.append({
+            "model": "gemini-1.5-flash",
+            # model="gemini-2.0-flash-exp",
+            "contents": chunk + "\n\n위 내용을 한국어로 번역하고 자연스러운 한국어로 수정하라.\n\n" + glossary(chunk, data),
+            "config": {
+                "system_instruction": system_prompt,
+                "max_output_tokens": 4096,
+                "temperature": 0.2,
+            },
+            "retry_count": 0,
+        })
+    
+    while True:
+        responses: list[GoogleGenaiClient.GenerateContentResponse] = []
+        for i, batch in enumerate(batched(chunk_args, 10)):
+            print(f"batch {i}...")
+            tasks = [
+                client.agenerate_content(
+                    model=chunk["model"],
+                    contents=chunk["contents"],
+                    config=chunk["config"],
+                    cache=cache,
+                )
+                for chunk in batch
+            ]
+            batch_responses = await asyncio.gather(*tasks, return_exceptions=True)
+            for r in batch_responses:
+                if isinstance(r, Exception):
+                    raise r
+                else:
+                    responses.append(r)
 
-    for i, r in enumerate(responses):
-        if r.candidates[0].finish_reason != "STOP":
-            raise Exception(f"Unexpected finish reason: {r.candidates[0].finish_reason} for chunk {i}")
+        for i, r in enumerate(responses):
+            if r.candidates[0].finish_reason != "STOP":
+                raise Exception(f"Unexpected finish reason: {r.candidates[0].finish_reason} for chunk {i}")
 
-    result_chunks = list(recover_start_end_tags(original, r.text) for original, r in zip(chunks, responses))
-    result_html = ''.join(result_chunks)
-    try:
-        result_html, result_title = restore_html(result_html, restore_info)
-    except TagMismatchError as e:
-        _print_tag_mismatch_error(e, chunks, result_chunks, result_html)
-        raise e
+        result_chunks = list(recover_start_end_tags(original, r.text) for original, r in zip(chunks, responses))
+        result_html = ''.join(result_chunks)
+        try:
+            result_html, result_title = restore_html(result_html, restore_info)
+        except TagMismatchError as e:
+            match = _find_tag_mismatch_chunk_index(e, result_html, result_chunks)
+            if not match:
+                print("Tag mismatch chunk not found")
+                raise e
+            
+            error_chunk_index, _ = match
+            if chunk_args[error_chunk_index]["retry_count"] > 0:
+                _print_tag_mismatch_error(e, chunks, result_chunks, result_html)
+                raise e
+            print(f"Retrying error chunk {error_chunk_index}")
+            chunk_args[error_chunk_index]["retry_count"] += 1
+            chunk_args[error_chunk_index]["model"] = "gemini-2.0-flash-exp"
+        else:
+            break
 
     result_path.write_text(json.dumps({
         "title": result_title,

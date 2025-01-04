@@ -26,6 +26,7 @@ class Redirect(BaseModel):
 class Page(BaseModel):
     title: str
     text: str
+    pageid: int
     revid: int
     langlinks: list[Langlink]
     links: list[Link]
