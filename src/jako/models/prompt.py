@@ -12,6 +12,7 @@ class RestoreInfo(BaseModel):
     metadata_tags: list[str]
     attrs: dict[int, dict[str, str | Any]]
     cite_refs: dict[str, CiteRefRestoreInfo]
+    references: dict[str, str] = {}
 
 
 class Prompt(BaseModel):

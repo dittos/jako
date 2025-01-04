@@ -68,12 +68,12 @@ async def process(input_path: Path, overwrite: bool = False):
         if r.candidates[0].finish_reason != "STOP":
             raise Exception(f"Unexpected finish reason: {r.candidates[0].finish_reason} for chunk {i}")
 
-    result_htmls = list(recover_start_end_tags(original, r.text) for original, r in zip(chunks, responses))
-    result_html = ''.join(result_htmls)
+    result_chunks = list(recover_start_end_tags(original, r.text) for original, r in zip(chunks, responses))
+    result_html = ''.join(result_chunks)
     try:
         result_html, result_title = restore_html(result_html, restore_info)
     except TagMismatchError as e:
-        _print_tag_mismatch_error(e, chunks, result_htmls)
+        _print_tag_mismatch_error(e, chunks, result_chunks, result_html)
         raise e
 
     result_path.write_text(json.dumps({
@@ -84,19 +84,34 @@ async def process(input_path: Path, overwrite: bool = False):
     # cache.flush()
 
 
-def _print_tag_mismatch_error(e: TagMismatchError, chunks, result_htmls):
+def _find_tag_mismatch_chunk_index(e: TagMismatchError, result_html, result_chunks):
     sourceline, sourcepos = e.node.sourceline, e.node.sourcepos
-    pos = sum(len(chunk) for chunk in chunks[:sourceline - 1]) + sourcepos
-    lastpos = 0
-    for i, result_chunk in enumerate(result_htmls):
-        if lastpos + len(result_chunk) >= pos:
-            pos_in_chunk = pos - lastpos
-            original_pos_in_chunk = chunks[i].find(f"<{e.expected_tag} id=\"{e.node_id}\"")
-            print(str(e))
-            print(f"Original:   {repr(chunks[i][max(original_pos_in_chunk-20, 0):min(original_pos_in_chunk+100, len(chunks[i]))])}")
-            print(f"Translated: {repr(result_chunk[max(pos_in_chunk-20, 0):min(pos_in_chunk+100, len(result_chunk))])}")
-            break
-        lastpos += len(result_chunk)
+    pos = sum(len(line) for line in result_html.splitlines(keepends=True)[:sourceline - 1]) + sourcepos
+    result_chunk_start = 0
+    for i, result_chunk in enumerate(result_chunks):
+        next_result_chunk_start = result_chunk_start + len(result_chunk)
+        if pos < next_result_chunk_start:
+            return i, pos - result_chunk_start
+        result_chunk_start = next_result_chunk_start
+    return None
+
+
+def _print_tag_mismatch_error(e: TagMismatchError, chunks, result_chunks, result_html):
+    match = _find_tag_mismatch_chunk_index(e, result_html, result_chunks)
+    if not match:
+        print("Tag mismatch chunk not found")
+        return
+    
+    error_chunk_index, pos_in_result_chunk = match
+    result_chunk = result_chunks[error_chunk_index]
+    original_chunk = chunks[error_chunk_index]
+    pos_in_original_chunk = original_chunk.find(f"<{e.expected_tag} id=\"{e.node_id}\"")
+    print(str(e))
+    if pos_in_original_chunk == -1:
+        print("Original tag not found")
+    else:
+        print(f"Original:   {repr(original_chunk[max(pos_in_original_chunk-20, 0):min(pos_in_original_chunk+200, len(original_chunk))])}")
+    print(f"Translated: {repr(result_chunk[max(pos_in_result_chunk-20, 0):min(pos_in_result_chunk+200, len(result_chunk))])}")
 
 
 async def main(args):

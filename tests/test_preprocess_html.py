@@ -17,10 +17,18 @@ def test_preprocess_html_simplify_cite_ref(keep_cite_ref_a: bool):
     assert BeautifulSoup(html, "html.parser") == BeautifulSoup(source, "html.parser")
 
 
-def test_preprocess_html():
-    html, restore_info = preprocess_html('<a href="hi">link</a>', "title")
-    assert html == '<title>title</title><a id="0">link</a>'
-    assert restore_info.attrs[0] == {"_tag": "a", "href": "hi"}
+def test_preprocess_html_simplify_references():
+    source = """<ol class="references"><li id="cite_note-15"><b><a href="#cite_ref-15">^</a></b> <span class="reference-text">Reference Text</span></li></ol>"""
+    html, restore_info = preprocess_html(source, "title")
+    assert restore_info.references["cite_note-15"] == '<b><a href="#cite_ref-15">^</a></b> <span class="reference-text"></span>'
+    html, _title = restore_html(html, restore_info)
+    assert BeautifulSoup(html, "html.parser") == BeautifulSoup(source, "html.parser")
+
+    source = """<ol class="references"><li id="cite_note-15">^ <a href="#cite_ref-..."><sup><i><b>a</b></i></sup></a> <a href="#cite_ref-..."><sup><i><b>b</b></i></sup></a> <span class="reference-text">Reference Text</span></li></ol>"""
+    html, restore_info = preprocess_html(source, "title")
+    assert restore_info.references["cite_note-15"] == '^ <a href="#cite_ref-..."><sup><i><b>a</b></i></sup></a> <a href="#cite_ref-..."><sup><i><b>b</b></i></sup></a> <span class="reference-text"></span>'
+    html, _title = restore_html(html, restore_info)
+    assert BeautifulSoup(html, "html.parser") == BeautifulSoup(source, "html.parser")
 
 
 def test_strip_broken_tag():

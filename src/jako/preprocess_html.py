@@ -41,6 +41,13 @@ def preprocess_html(html: str, title: str, keep_cite_ref_a: bool = False):
     for comment in doc.find_all(string=lambda text: isinstance(text, bs4.Comment)):
         comment.extract()
     
+    # remove unnecessary tags
+    for node in doc.select(".mw-heading .indicator"):
+        node.extract()
+    for node in doc.select("h1 > span, h2 > span, h3 > span, h4 > span, h5 > span, h6 > span"):
+        if not node.contents:
+            node.extract()
+    
     # simplify citations
     # <sup class="reference" id="cite_ref-2">
     #   <a href="#cite_note-2">
@@ -67,6 +74,31 @@ def preprocess_html(html: str, title: str, keep_cite_ref_a: bool = False):
                     pre=to_html(pre),
                     post=to_html(post),
                 )
+    
+    # simplify references
+    # <ol class="references">
+    #   <li id="cite_note-15">
+    #       <!-- 1 citation case -->
+    #       <b><a href="#cite_ref-15">^</a></b>
+    #       <!-- 2+ citations case -->
+    #       ^ <a href="#cite_ref-..."><sup><i><b>a</b></i></sup></a> <a href="#cite_ref-..."><sup><i><b>b</b></i></sup></a> ...
+    #       <span class="reference-text">Reference Text</span>
+    #   </li>
+    # </ol>
+    # -->
+    # <ol class="references">
+    #   <li id="cite_note-15">Reference Text</li>
+    # </ol>
+    references = {}
+    for ref in doc.select("ol.references > li"):
+        ref_id = ref.attrs.get("id")
+        if not ref_id: print(ref); raise Exception("reference id not found")
+        ref_text = ref.select_one(".reference-text")
+        ref_text_contents = list(ref_text.contents)
+        ref_text.clear()
+        references[ref_id] = ref.decode_contents(formatter=HTML_FORMATTER)
+        ref.clear()
+        ref.extend(ref_text_contents)
 
     attrs = {}
     next_node_id = 0
@@ -92,6 +124,7 @@ def preprocess_html(html: str, title: str, keep_cite_ref_a: bool = False):
         metadata_tags=metadata_tags,
         attrs=attrs,
         cite_refs=cite_refs,
+        references=references,
     )
 
 
@@ -151,6 +184,20 @@ def restore_html(html: str, restore_info: RestoreInfo):
             a.extend(new_content)
             a.append(parse_html(ref.post))
             cite.append(a)
+    
+    # restore references
+    references = restore_info.references
+    for ref in doc.select("ol.references > li"):
+        ref_id = ref.attrs.get("id")
+        if not ref_id: continue
+        placeholder_html = references.get(ref_id)
+        if not placeholder_html:
+            raise Exception("reference not found: id={ref_id}")
+        placeholder = parse_html(placeholder_html)
+        ref_text_contents = list(ref.contents)
+        ref.clear()
+        placeholder.select_one(".reference-text").extend(ref_text_contents)
+        ref.extend(placeholder.contents)
 
     # restore metadata tags
     for expected_tag in restore_info.metadata_tags:
@@ -307,7 +354,7 @@ def preprocess_split_html(html: str, title: str, size: int, keep_cite_ref_a: boo
                 yield start
                 yield from _split_html(children)
                 if end:
-                    yield f"</{end}"
+                    yield f"</{end}\n"
             else:
                 yield to_html(child)
 
