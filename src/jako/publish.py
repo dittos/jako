@@ -3,6 +3,8 @@ import os
 from pathlib import Path
 import shutil
 
+import urllib.parse
+
 from jako.models.page import PageData
 
 
@@ -14,6 +16,8 @@ def main():
     publish_dir = Path("data/publish")
     shutil.rmtree(publish_dir, ignore_errors=True)
     publish_dir.mkdir(parents=True, exist_ok=True)
+
+    titles = []
 
     source_dir = Path("data/source")
     result_dir = Path("data/result")
@@ -28,6 +32,7 @@ def main():
         result["last_rev_timestamp"] = source.last_rev_timestamp.isoformat()
         publish_path.write_text(json.dumps(result, ensure_ascii=False, indent=2))
         print(f"Published: {publish_path}")
+        titles.append(translated_title)
 
         if translated_title != original_title:
             redirect_publish_path = publish_dir / safe_filename(original_title)
@@ -37,6 +42,7 @@ def main():
                 }
             }, ensure_ascii=False, indent=2))
             print(f"Published: {redirect_publish_path} (redirect)")
+            titles.append(original_title)
 
         for redirect in source.page.redirects:
             redirect_publish_path = publish_dir / safe_filename(redirect.from_)
@@ -47,6 +53,16 @@ def main():
                 }
             }, ensure_ascii=False, indent=2))
             print(f"Published: {redirect_publish_path} (redirect)")
+            titles.append(redirect.from_)
+    
+    with open(publish_dir / "sitemap.xml", "w") as f:
+        f.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+        f.write("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n")
+        for title in titles:
+            url = f"https://jako.sapzil.org/wiki/{urllib.parse.quote(title)}"
+            f.write(f"<url><loc>{url}</loc></url>\n")
+        f.write("</urlset>\n")
+    print("Published: sitemap.xml")
 
 
 if __name__ == "__main__":

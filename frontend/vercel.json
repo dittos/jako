@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/sitemap.xml",
+      "destination": "https://jako-data-kr.s3.ap-northeast-2.amazonaws.com/sitemap.xml"
+    }
+  ]
+}
