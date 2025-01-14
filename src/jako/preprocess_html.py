@@ -335,7 +335,7 @@ def filter_effective_children(children: Iterable[bs4.PageElement]):
 def preprocess_split_html(html: str, title: str, size: int, keep_cite_ref_a: bool = False) -> tuple[list[str], RestoreInfo]:
     html, restore_info = preprocess_html(html, title=title, keep_cite_ref_a=keep_cite_ref_a)
     doc = parse_html(html)
-    can_split_div_classes = {"section-heading", "toc", "reflist", "thumb", "thumbinner", "mw-parser-output"}
+    can_split_div_classes = {"section-heading", "toc", "reflist", "thumb", "thumbinner", "mw-parser-output", "NavFrame", "NavContent"}
 
     def _can_split(node: bs4.Tag):
         if node.name in ("section", "dl", "ul", "ol", "table", "tbody"):

@@ -22,6 +22,8 @@ class Redirect(BaseModel):
     to: str
     tofragment: str | None = None
 
+    model_config = ConfigDict(populate_by_name=True)
+
 
 class Page(BaseModel):
     title: str

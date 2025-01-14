@@ -1,7 +1,9 @@
+import argparse
 from collections import defaultdict
 from datetime import datetime
 from typing import Iterable
 import requests
+from tqdm.auto import tqdm
 
 from jako.models.page import Page, PageLanglinks, PageData
 
@@ -114,7 +116,7 @@ def download_pages(titles: Iterable[str]):
     from pathlib import Path
     from itertools import batched
 
-    for batch in batched(titles, 20):
+    for batch in batched(tqdm(titles), 20):
         print(f"\nfetching info: batch size = {len(batch)}, first = {batch[0]}, last = {batch[-1]}")
         infos = batch_get_page_infos(batch)
 
@@ -140,8 +142,19 @@ def download_pages(titles: Iterable[str]):
                 links_langlinks=langlinks,
                 last_rev_timestamp=last_rev_timestamp,
             )
-            save_path.write_text(data.model_dump_json(indent=2))
+            save_path.write_text(data.model_dump_json(indent=2, by_alias=True))
+
+
+def main(args):
+    with open(args.input) as f:
+        titles = [line.strip() for line in f if line.strip()]
+    download_pages(titles)
 
 
 if __name__ == "__main__":
-    download_pages((page["title"] for page in get_category_members("Category:2024年のテレビアニメ")))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("input", help="Input file")
+    parser.add_argument("--overwrite", action="store_true")
+    main(parser.parse_args())
+
+    # download_pages((page["title"] for page in get_category_members("Category:2024年のテレビアニメ")))
