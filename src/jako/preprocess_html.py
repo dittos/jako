@@ -409,3 +409,16 @@ def recover_start_end_tags(original: str, response: str) -> str:
     end_pos = response_end_tags.start() if response_end_tags else len(response)
 
     return original_start_tags + response[start_pos:end_pos] + original_end_tags
+
+
+NUMBER_PATTERN = re.compile(r'\d+')
+
+
+def fix_cite_ref_a(html: str) -> str:
+    doc = parse_html(html)
+    for a in doc.select("sup a"):
+        href = a.attrs.get("href")
+        if href and href.startswith("#cite_note-") and a.string and NUMBER_PATTERN.match(a.string):
+            a.insert(0, "[")
+            a.append("]")
+    return to_html(doc)

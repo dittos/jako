@@ -6,6 +6,7 @@ import shutil
 import urllib.parse
 
 from jako.models.page import PageData
+from jako.preprocess_html import fix_cite_ref_a
 
 
 def safe_filename(title: str) -> str:
@@ -18,6 +19,9 @@ def main():
     publish_dir.mkdir(parents=True, exist_ok=True)
 
     titles = []
+    canonical_count = 0
+    translated_redirect_count = 0
+    redirect_count = 0
 
     source_dir = Path("data/source")
     result_dir = Path("data/result")
@@ -30,9 +34,11 @@ def main():
         publish_path = publish_dir / safe_filename(translated_title)
         result["original_title"] = original_title
         result["last_rev_timestamp"] = source.last_rev_timestamp.isoformat()
+        result["html"] = fix_cite_ref_a(result["html"])
         publish_path.write_text(json.dumps(result, ensure_ascii=False, indent=2))
         print(f"Published: {publish_path}")
         titles.append(translated_title)
+        canonical_count += 1
 
         if translated_title != original_title:
             redirect_publish_path = publish_dir / safe_filename(original_title)
@@ -43,6 +49,7 @@ def main():
             }, ensure_ascii=False, indent=2))
             print(f"Published: {redirect_publish_path} (redirect)")
             titles.append(original_title)
+            translated_redirect_count += 1
 
         for redirect in source.page.redirects:
             redirect_publish_path = publish_dir / safe_filename(redirect.from_)
@@ -54,6 +61,7 @@ def main():
             }, ensure_ascii=False, indent=2))
             print(f"Published: {redirect_publish_path} (redirect)")
             titles.append(redirect.from_)
+            redirect_count += 1
     
     with open(publish_dir / "sitemap.xml", "w") as f:
         f.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
@@ -63,6 +71,9 @@ def main():
             f.write(f"<url><loc>{url}</loc></url>\n")
         f.write("</urlset>\n")
     print("Published: sitemap.xml")
+
+    print("-" * 30)
+    print(f"Stats: {canonical_count=} {translated_redirect_count=} {redirect_count=}")
 
 
 if __name__ == "__main__":
