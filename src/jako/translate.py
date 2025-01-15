@@ -77,7 +77,7 @@ async def process(input_path: Path, overwrite: bool = False):
 
         for i, r in enumerate(responses):
             if r.candidates[0].finish_reason != "STOP":
-                raise Exception(f"Unexpected finish reason: {r.candidates[0].finish_reason} for chunk {i}")
+                raise Exception(f"Unexpected finish reason: {r.candidates[0].finish_reason} for chunk #{i}")
 
         result_chunks = list(recover_start_end_tags(original, r.text) for original, r in zip(chunks, responses))
         result_html = ''.join(result_chunks)
