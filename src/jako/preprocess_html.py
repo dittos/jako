@@ -105,6 +105,7 @@ def preprocess_html(html: str, title: str, keep_cite_ref_a: bool = False):
         ref_id = ref.attrs.get("id")
         if not ref_id: print(ref); raise Exception("reference id not found")
         ref_text = ref.select_one(".reference-text")
+        if ref_text is None: print(ref); raise Exception("reference text not found")
         ref_text_contents = list(ref_text.contents)
         ref_text.clear()
         references[ref_id] = ref.decode_contents(formatter=HTML_FORMATTER)
@@ -335,12 +336,16 @@ def filter_effective_children(children: Iterable[bs4.PageElement]):
 def preprocess_split_html(html: str, title: str, size: int, keep_cite_ref_a: bool = False) -> tuple[list[str], RestoreInfo]:
     html, restore_info = preprocess_html(html, title=title, keep_cite_ref_a=keep_cite_ref_a)
     doc = parse_html(html)
-    can_split_div_classes = {"section-heading", "toc", "reflist", "thumb", "thumbinner", "mw-parser-output", "NavFrame", "NavContent", "mw-collapsible", "mw-collapsible-content"}
+    can_split_div_classes = {"section-heading", "toc", "reflist", "thumb", "thumbinner", "mw-parser-output", "NavFrame", "NavContent", "mw-collapsible", "mw-collapsible-content",
+                             "columns"}
 
     def _can_split(node: bs4.Tag):
         if node.name in ("section", "dl", "ul", "ol", "table", "tbody"):
             return True
         if node.name == "li":
+            if node.select_one("ul, ol"):
+                return True
+        if node.name == "dd":
             if node.select_one("ul, ol"):
                 return True
         if node.name in ("tr", "td"):
@@ -357,6 +362,8 @@ def preprocess_split_html(html: str, title: str, size: int, keep_cite_ref_a: boo
             if "class" in attrs:
                 if any(cls in can_split_div_classes for cls in attrs["class"]):
                     return True
+            else:
+                return True
         return False
 
     def _split_html(children: list[bs4.PageElement]):
