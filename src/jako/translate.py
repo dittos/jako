@@ -36,7 +36,7 @@ async def process(input_path: Path, overwrite: bool = False):
 
     system_prompt = "You are a professional Japanese to Korean translator."\
         "Don't use Kanji,Hiragana,Katakana.Only use Hangul."\
-        "Keep all HTML tags, especially keep id attributes."\
+        "Keep all HTML tags, especially keep id attributes.Do NOT add new HTML tags."\
         "Try to transliterate names in Japanese language to Hangul."\
         "Don't ask to continue translation.Don't explain about translation."\
         "Don't stop translation early."
