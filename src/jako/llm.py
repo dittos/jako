@@ -1,8 +1,9 @@
 import asyncio
 import os
+import traceback
 from google import genai
 from google.genai import types
-from google.genai.errors import ClientError
+from google.genai.errors import APIError
 
 from jako.cache import Cache
 
@@ -49,8 +50,10 @@ class GoogleGenaiClient:
                     contents=contents,
                     config=config,
                 )
-            except ClientError as e:
-                if e.code == 429:
+            except APIError as e:
+                if e.code in (429, 503):
+                    traceback.print_exc()
+                    print("Rate limit exceeded, retrying in 10 seconds...")
                     await asyncio.sleep(10)
                     continue
                 raise
