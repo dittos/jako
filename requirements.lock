@@ -66,7 +66,7 @@ google-cloud-core==1.5.0
     # via google-cloud-translate
 google-cloud-translate==3.18.0
     # via jako
-google-genai==0.3.0
+google-genai==0.6.0
     # via jako
 google-generativeai==0.8.3
     # via jako

@@ -3,6 +3,7 @@ import asyncio
 from itertools import batched
 import json
 from pathlib import Path
+import traceback
 
 from jako.cache import Cache
 from jako.llm import GoogleGenaiClient
@@ -158,7 +159,10 @@ async def main(args):
     
     for input_path in input_paths:
         print(f"Processing {input_path}")
-        await process(input_path, overwrite=args.overwrite)
+        try:
+            await process(input_path, overwrite=args.overwrite)
+        except Exception:
+            traceback.print_exc()
 
 
 if __name__ == "__main__":
