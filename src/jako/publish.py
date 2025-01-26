@@ -3,7 +3,10 @@ import os
 from pathlib import Path
 import shutil
 
+import subprocess
 import urllib.parse
+
+import requests
 
 from jako.models.page import PageData
 from jako.preprocess_html import fix_cite_ref_a
@@ -83,14 +86,29 @@ def main():
         translated_redirect_count += trc
         redirect_count += rc
 
+    urls = []
     with open(publish_dir / "sitemap.xml", "w") as f:
         f.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
         f.write("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n")
         for title in titles:
             url = f"https://jako.sapzil.org/wiki/{urllib.parse.quote(title)}"
+            urls.append(url)
             f.write(f"<url><loc>{url}</loc></url>\n")
         f.write("</urlset>\n")
     print("Published: sitemap.xml")
+
+    subprocess.run(["aws", "s3", "sync", publish_dir, "s3://jako-data-kr/"], check=True)
+
+    print("Calling IndexNow API...")
+    resp = requests.post("https://api.indexnow.org/indexnow", json={
+        "host": "jako.sapzil.org",
+        "key": "198c6938537a4c3185af9ff04fa38082",
+        "keyLocation": "https://jako.sapzil.org/indexnowkey",
+        "urlList": urls,
+    })
+    if not resp.ok:
+        print(resp.content)
+        resp.raise_for_status()
 
     print("-" * 30)
     print(f"Stats: {canonical_count=} {translated_redirect_count=} {redirect_count=}")
