@@ -22,9 +22,15 @@
             <div id="mw-content-text" class="mw-body-content">
                 <p>{{ chunks | length }} parts</p>
                 {% for chunk in chunks %}
-                    {{ chunk | length }}
+                    #{{ loop.index0 }}: {{ chunk.raw | length }} chars
+                    <details>
+                        <summary>Restored</summary>
+                        <div style="outline: 2px solid red; margin: 1rem">
+                            {{ chunk.restored }}
+                        </div>
+                    </details>
                     <div style="outline: 2px solid blue; margin: 1rem">
-                        {{ chunk }}
+                        {{ chunk.raw }}
                     </div>
                 {% endfor %}
             </div>

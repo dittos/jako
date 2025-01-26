@@ -7,19 +7,14 @@
         <link rel="stylesheet" href="//meta.wikimedia.org/api/rest_v1/data/css/mobile/base">
         <link rel="stylesheet" href="//ko.wikipedia.org/api/rest_v1/data/css/mobile/site">
         <link rel="stylesheet" href="//meta.wikimedia.org/api/rest_v1/data/css/mobile/pcs">
+        <link rel="stylesheet" href="/static/style.css">
     </head>
     <body>
-        <div class="pre-content heading-holder">
-            <div class="page-heading">
-                <h1 id="firstHeading" class="firstHeading mw-first-heading"><span class="mw-page-title-main">{{ title }}</span></h1>
-                <div class="tagline">
-                    <a href="/source/{{ page | urlencode }}">[debug]</a>
-                    <a href="https://ja.m.wikipedia.org/wiki/{{ page | urlencode }}" target="_blank">[source]</a>
-                </div>
-            </div>
+        <div class="jako-header">
+            <h1 class="jako-header-title">{{ title }}</h1>
         </div>
 
-        <div id="bodyContent" class="content">
+        <div class="content jako-content">
             <div id="mw-content-text" class="mw-body-content">
                 {{ html | safe }}
             </div>

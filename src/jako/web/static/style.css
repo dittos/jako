@@ -1,0 +1,88 @@
+:root {
+    --jako-text-color: #3f3f3f;
+}
+
+body {
+    word-break: keep-all;
+    margin: 0;
+}
+
+.jako-header {
+    margin: 16px auto;
+    padding: 0 16px;
+    max-width: 700px;
+}
+
+.jako-header-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+.jako-content {
+    max-width: 700px;
+    color: var(--jako-text-color);
+    font-size: 15px;
+    line-height: 1.8;
+}
+
+.jako-content .toc ul {
+    line-height: 2;
+}
+
+.jako-content .toc li {
+    list-style: none;
+    margin: 0;
+}
+
+.jako-content .toctext {
+    color: var(--jako-text-color);
+}
+
+.jako-content table.infobox {
+    margin-bottom: 1.5em;
+}
+
+.jako-content h1, .jako-content h2, .jako-content h3, .jako-content h4, .jako-content h5, .jako-content h6 {
+    font-family: sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+.jako-content .section-heading, .jako-content .toctitle {
+    border-bottom: 1px solid #ccc;
+    margin-top: 1.5em;
+    margin-bottom: 1em;
+}
+
+.jako-content .mw-heading3, .jako-content .mw-heading4 {
+    margin-top: 1em;
+}
+
+.jako-content dl {
+    margin: 0;
+}
+
+.jako-content dl dl {
+    margin-left: 1em;
+}
+
+.jako-content dt {
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+    list-style: disc;
+    display: list-item;
+    margin-left: 1em;
+}
+
+.jako-content dl dt:first-child {
+    margin-top: 0.5em;
+}
+
+.jako-content dd {
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+    margin-left: 1em;
+}

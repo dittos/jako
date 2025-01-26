@@ -1,7 +1,7 @@
 <ul>
 {% for page in pages %}
     <li>
-        <a href="/result/{{ page.page | urlencode }}"{% if not page.complete %} style="color: gray"{% endif %}>{{ page.page }}</a>
+        <a href="/wiki/{{ page.page | urlencode }}"{% if not page.complete %} style="color: gray"{% endif %}>{{ page.page }}</a>
     </li>
 {% endfor %}
 </ul>
