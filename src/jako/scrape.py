@@ -2,6 +2,9 @@ import argparse
 from collections import defaultdict
 from datetime import datetime
 from typing import Iterable
+from pathlib import Path
+from itertools import batched
+
 import requests
 from tqdm.auto import tqdm
 
@@ -113,36 +116,38 @@ def get_category_members(category: str):
 
 
 def download_pages(titles: Iterable[str]):
-    from pathlib import Path
-    from itertools import batched
-
     for batch in batched(tqdm(titles), 20):
         print(f"\nfetching info: batch size = {len(batch)}, first = {batch[0]}, last = {batch[-1]}")
         infos = batch_get_page_infos(batch)
 
         for title in batch:
             info = infos[title]
-            last_rev_timestamp = datetime.fromisoformat(info["touched"])
+            download_page(title, info)
 
-            save_path = Path("data/source") / f"{title.replace('/', '__')}.json"
-            if save_path.exists():
-                data = PageData.model_validate_json(save_path.read_text())
-                age = (last_rev_timestamp - data.last_rev_timestamp).days
-                print(f"skipping page: {title} (age={age}d)")
-                continue
-            
-            print(f"fetching page: {title}")
-            page = parse_page(title)
-            langlinks = []
-            for links_batch in batched((link.title for link in page.links if link.exists), 20):
-                langlinks.extend(batch_get_page_langlinks(links_batch, "ko"))
-            
-            data = PageData(
-                page=page,
-                links_langlinks=langlinks,
-                last_rev_timestamp=last_rev_timestamp,
-            )
-            save_path.write_text(data.model_dump_json(indent=2, by_alias=True))
+
+def download_page(title: str, info: dict) -> bool:
+    last_rev_timestamp = datetime.fromisoformat(info["touched"])
+
+    save_path = Path("data/source") / f"{title.replace('/', '__')}.json"
+    if save_path.exists():
+        data = PageData.model_validate_json(save_path.read_text())
+        age = (last_rev_timestamp - data.last_rev_timestamp).days
+        print(f"skipping page: {title} (age={age}d)")
+        return False
+    
+    print(f"fetching page: {title}")
+    page = parse_page(title)
+    langlinks = []
+    for links_batch in batched((link.title for link in page.links if link.exists), 20):
+        langlinks.extend(batch_get_page_langlinks(links_batch, "ko"))
+    
+    data = PageData(
+        page=page,
+        links_langlinks=langlinks,
+        last_rev_timestamp=last_rev_timestamp,
+    )
+    save_path.write_text(data.model_dump_json(indent=2, by_alias=True))
+    return True
 
 
 def main(args):
