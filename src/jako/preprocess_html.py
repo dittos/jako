@@ -204,7 +204,7 @@ def restore_html(html: str, restore_info: RestoreInfo):
         if not ref_id: continue
         placeholder_html = references.get(ref_id)
         if not placeholder_html:
-            raise Exception("reference not found: id={ref_id}")
+            raise Exception(f"reference not found: id={ref_id}")
         placeholder = parse_html(placeholder_html)
         ref_text_contents = list(ref.contents)
         ref.clear()
