@@ -1,4 +1,5 @@
 import asyncio
+import os
 from pathlib import Path
 from celery import Celery
 import urllib
@@ -8,7 +9,7 @@ from jako.scrape import batch_get_page_infos, download_page
 from jako.translate import process as translate_file
 import boto3
 
-app = Celery('hello', broker="redis://localhost:6379/0", backend="db+sqlite:///data/worker/backend.sqlite3")
+app = Celery('hello', broker=os.environ['CELERY_BROKER'], backend="db+sqlite:///data/worker/backend.sqlite3")
 s3 = boto3.client("s3")
 
 
