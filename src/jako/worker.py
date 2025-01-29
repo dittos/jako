@@ -17,9 +17,7 @@ s3 = boto3.client("s3")
 def translate(title: str):
     infos = batch_get_page_infos([title])
     info = infos[title]
-    updated = download_page(title, info)
-    if not updated:
-        return f"{title} is up to date"
+    download_page(title, info)
     
     filename = f"{title.replace('/', '__')}.json"
     input_path = Path("data/source") / filename
