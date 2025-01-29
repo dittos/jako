@@ -12,7 +12,7 @@ class GoogleGenaiClient:
     GenerateContentResponse = types.GenerateContentResponse
 
     def __init__(self):
-        self._client = genai.Client(api_key=os.environ["GEMINI_API_KEY"], http_options={"timeout": 60 * 5})
+        self._client = genai.Client(api_key=os.environ["GEMINI_API_KEY"], http_options={"timeout": 60 * 5 * 1000})
     
     async def agenerate_content(
         self,
