@@ -9,12 +9,21 @@ from jako.scrape import batch_get_page_infos, download_page, get_category_member
 from jako.translate import process as translate_file
 import boto3
 
-app = Celery('jako.worker', broker=os.environ['CELERY_BROKER'], backend="db+sqlite:///data/worker/backend.sqlite3")
+app = Celery("jako.worker", broker=os.environ["CELERY_BROKER"], backend="db+sqlite:///data/worker/backend.sqlite3")
+app.conf.worker_prefetch_multiplier = 1
+
+# https://docs.celeryq.dev/en/stable/userguide/routing.html#redis-message-priorities
+app.conf.broker_transport_options = {
+    'queue_order_strategy': 'priority',
+}
+app.conf.task_default_priority = 5
+
 app.conf.beat_schedule = {
     'publish sitemap if changed': {
         'task': 'jako.worker.publish_sitemap',
         'schedule': crontab(minute=0),  # hourly
         'args': (),
+        'options': {'priority': 1},  # high priority
     },
 }
 
