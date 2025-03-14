@@ -49,8 +49,7 @@ async def process(input_path: Path, overwrite: bool = False):
         if len(prompt) > max_output_tokens:
             raise ValueError(f"chunk {i} is too large: {len(prompt)}")
         chunk_args.append({
-            "model": "gemini-1.5-flash",
-            # "model": "gemini-2.0-flash-exp",
+            "model": "gemini-2.0-flash",
             "contents": prompt,
             "config": {
                 "system_instruction": system_prompt,
@@ -100,8 +99,7 @@ async def process(input_path: Path, overwrite: bool = False):
                 raise e
             print(f"Retrying error chunk {error_chunk_index}")
             chunk_args[error_chunk_index]["retry_count"] += 1
-            chunk_args[error_chunk_index]["model"] = "gemini-2.0-flash-exp"
-            # chunk_args[error_chunk_index]["model"] = "gemini-1.5-flash"
+            chunk_args[error_chunk_index]["model"] = "gemini-2.0-flash-lite"
         else:
             break
 
