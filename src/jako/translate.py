@@ -45,11 +45,11 @@ async def process(input_path: Path, overwrite: bool = False):
     max_output_tokens = 8192    
     chunk_args = []
     for i, chunk in enumerate(chunks):
-        prompt = chunk + "\n\n위 내용을 한국어로 번역하고 자연스러운 한국어로 수정하라.\n\n" + glossary(chunk, data)
+        prompt = chunk + "\n\n위 내용을 자연스러운 한국어로 번역하라.\n\n" + glossary(chunk, data)
         if len(prompt) > max_output_tokens:
             raise ValueError(f"chunk {i} is too large: {len(prompt)}")
         chunk_args.append({
-            "model": "gemini-2.0-flash",
+            "model": "gemini-2.0-flash-lite",
             "contents": prompt,
             "config": {
                 "system_instruction": system_prompt,
@@ -99,7 +99,7 @@ async def process(input_path: Path, overwrite: bool = False):
                 raise e
             print(f"Retrying error chunk {error_chunk_index}")
             chunk_args[error_chunk_index]["retry_count"] += 1
-            chunk_args[error_chunk_index]["model"] = "gemini-2.0-flash-lite"
+            chunk_args[error_chunk_index]["model"] = "gemini-2.0-flash"
         else:
             break
 
