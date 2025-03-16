@@ -140,12 +140,17 @@ def preprocess_html(html: str, title: str, keep_cite_ref_a: bool = False):
     )
 
 
-class TagMismatchError(ValueError):
-    def __init__(self, node: bs4.Tag, expected_tag: str):
+class BrokenHtmlError(ValueError):
+    def __init__(self, node: bs4.Tag, message: str):
         self.node = node
+        super().__init__(f"broken html: {message}")
+
+
+class TagMismatchError(BrokenHtmlError):
+    def __init__(self, node: bs4.Tag, expected_tag: str):
         self.node_id = node.attrs["id"]
         self.expected_tag = expected_tag
-        super().__init__(f"tag mismatch; id={self.node_id}; expected {expected_tag} but {node.name}")
+        super().__init__(node, f"tag mismatch; id={self.node_id}; expected {expected_tag} but {node.name}")
 
 
 def restore_html(html: str, restore_info: RestoreInfo):
@@ -166,7 +171,10 @@ def restore_html(html: str, restore_info: RestoreInfo):
         if not node_id:
             continue
 
-        int_node_id = int(node_id, 16)
+        try:
+            int_node_id = int(node_id, 16)
+        except ValueError:
+            raise BrokenHtmlError(node, f"invalid id: {node_id}")
         attrs = restore_info.attrs.get(int_node_id)
         expected_tag = attrs.pop("_tag", None)
         if expected_tag and node.name != expected_tag:

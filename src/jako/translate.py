@@ -8,7 +8,7 @@ import traceback
 from jako.cache import Cache
 from jako.llm import GoogleGenaiClient
 from jako.models.page import PageData
-from jako.preprocess_html import TagMismatchError, preprocess_split_html, recover_start_end_tags, restore_html
+from jako.preprocess_html import BrokenHtmlError, TagMismatchError, preprocess_split_html, recover_start_end_tags, restore_html
 from jako.prompts.glossary import glossary
 
 
@@ -87,15 +87,15 @@ async def process(input_path: Path, overwrite: bool = False):
         result_html = ''.join(result_chunks)
         try:
             result_html, result_title = restore_html(result_html, restore_info)
-        except TagMismatchError as e:
-            match = _find_tag_mismatch_chunk_index(e, result_html, result_chunks)
+        except BrokenHtmlError as e:
+            match = _find_broken_html_chunk_index(e, result_html, result_chunks)
             if not match:
-                print("Tag mismatch chunk not found")
+                print("Broken chunk not found")
                 raise e
             
             error_chunk_index, _ = match
             if chunk_args[error_chunk_index]["retry_count"] > 0:
-                _print_tag_mismatch_error(e, chunks, result_chunks, result_html)
+                _print_broken_html_error(e, chunks, result_chunks, result_html)
                 raise e
             print(f"Retrying error chunk {error_chunk_index}")
             chunk_args[error_chunk_index]["retry_count"] += 1
@@ -111,7 +111,7 @@ async def process(input_path: Path, overwrite: bool = False):
     # cache.flush()
 
 
-def _find_tag_mismatch_chunk_index(e: TagMismatchError, result_html, result_chunks):
+def _find_broken_html_chunk_index(e: BrokenHtmlError, result_html, result_chunks):
     sourceline, sourcepos = e.node.sourceline, e.node.sourcepos
     pos = sum(len(line) for line in result_html.splitlines(keepends=True)[:sourceline - 1]) + sourcepos
     result_chunk_start = 0
@@ -123,22 +123,23 @@ def _find_tag_mismatch_chunk_index(e: TagMismatchError, result_html, result_chun
     return None
 
 
-def _print_tag_mismatch_error(e: TagMismatchError, chunks, result_chunks, result_html):
-    match = _find_tag_mismatch_chunk_index(e, result_html, result_chunks)
+def _print_broken_html_error(e: BrokenHtmlError, chunks, result_chunks, result_html):
+    match = _find_broken_html_chunk_index(e, result_html, result_chunks)
     if not match:
         print("Tag mismatch chunk not found")
         return
     
-    error_chunk_index, pos_in_result_chunk = match
-    result_chunk = result_chunks[error_chunk_index]
-    original_chunk = chunks[error_chunk_index]
-    pos_in_original_chunk = original_chunk.find(f"<{e.expected_tag} id=\"{e.node_id}\"")
-    print(str(e))
-    if pos_in_original_chunk == -1:
-        print("Original tag not found")
-    else:
-        print(f"Original:   {repr(original_chunk[max(pos_in_original_chunk-20, 0):min(pos_in_original_chunk+200, len(original_chunk))])}")
-    print(f"Translated: {repr(result_chunk[max(pos_in_result_chunk-20, 0):min(pos_in_result_chunk+200, len(result_chunk))])}")
+    if isinstance(e, TagMismatchError):
+        error_chunk_index, pos_in_result_chunk = match
+        result_chunk = result_chunks[error_chunk_index]
+        original_chunk = chunks[error_chunk_index]
+        pos_in_original_chunk = original_chunk.find(f"<{e.expected_tag} id=\"{e.node_id}\"")
+        print(str(e))
+        if pos_in_original_chunk == -1:
+            print("Original tag not found")
+        else:
+            print(f"Original:   {repr(original_chunk[max(pos_in_original_chunk-20, 0):min(pos_in_original_chunk+200, len(original_chunk))])}")
+        print(f"Translated: {repr(result_chunk[max(pos_in_result_chunk-20, 0):min(pos_in_result_chunk+200, len(result_chunk))])}")
 
 
 async def main(args):
