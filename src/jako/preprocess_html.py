@@ -399,6 +399,9 @@ END_TAGS_PATTERN = re.compile(r'(</[a-z]+>\s*)+$')
 
 def recover_start_end_tags(original: str, response: str) -> str:
     response = response.replace("```html", "").replace("```", "")
+
+    if response.startswith("<!DOCTYPE html>") and not original.startswith("<!DOCTYPE html>"):
+        response = re.sub(r"<!DOCTYPE html>\s*<html>\s*<head>\s*(.+)\s*</head>\s*<body>\s*(.+)\s*</body>\s*</html>", "\\1\\2", response)
     
     original_end_tags = END_TAGS_PATTERN.search(original)
     if original_end_tags:

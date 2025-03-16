@@ -54,3 +54,4 @@ def test_recover_start_end_tags():
     assert recover_start_end_tags("<section>hi", "<section>hi") == "<section>hi"
     assert recover_start_end_tags("<section>hi", "<section>hi</section>") == "<section>hi"
     assert recover_start_end_tags("<tr>\n<td>hi</td>\n</tr>", "<table><tr><td>hi</td></tr></table>") == "<tr>\n<td>hi</td>\n</tr>"
+    assert recover_start_end_tags("<title>title</title>hi", "<!DOCTYPE html>\n<html>\n<head>\n<title>title</title>\n</head>\n<body>\nhi</body></html>") == "<title>title</title>hi"
